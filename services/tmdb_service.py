@@ -35,7 +35,7 @@ def clean_media_data(movies_list):
     """
     blocked_keywords = [
         'erotic', 'erotica', 'lust', 'sex', 'porn', 'sensual', 
-        'seduction', '18\+', 'b-grade', 'desire', 'intimacy', 'prostitute', 
+        'seduction', r'18\+', 'b-grade', 'desire', 'intimacy', 'prostitute', 
         'call girl', 'gigolo', 'nymphomaniac', 'anaagarigam'
     ]
     
@@ -135,13 +135,16 @@ def get_similar_movies(movie_id, media_type="movie"):
 # ------------------------------------
 # Discover
 # ------------------------------------
-def discover_movies(page=1, genre=None, year=None, rating=None, sort_by="popularity.desc", media_type="movie"):
+def discover_movies(page=1, genre=None, year=None, rating=None, sort_by="popularity.desc", media_type="movie", provider=None):
     # If "all", interleave both movie and tv endpoints
     if media_type == "all":
         movie_params = { "page": page, "sort_by": sort_by, "with_original_language": "ta", "include_adult": "false" }
         if genre: movie_params["with_genres"] = genre
         if year: movie_params["primary_release_year"] = year
         if rating: movie_params["vote_average.gte"] = rating
+        if provider: 
+            movie_params["with_watch_providers"] = provider
+            movie_params["watch_region"] = "IN"
         
         tv_params = { 
             "page": page, 
@@ -149,7 +152,7 @@ def discover_movies(page=1, genre=None, year=None, rating=None, sort_by="popular
             "with_original_language": "ta", 
             "include_adult": "false",
             "watch_region": "IN",
-            "with_watch_providers": "8|119|122|220|237|100|319" # Netflix, Amazon, Hotstar, ZEE5, SonyLIV, Apple, JioCinema
+            "with_watch_providers": provider if provider else "8|119|122|220|237|100|319" # Netflix, Amazon, Hotstar, ZEE5, SonyLIV, Apple, JioCinema
         }
         if genre: tv_params["with_genres"] = genre
         if year: tv_params["first_air_date_year"] = year
@@ -180,7 +183,11 @@ def discover_movies(page=1, genre=None, year=None, rating=None, sort_by="popular
     
     if media_type == "tv":
         params["watch_region"] = "IN"
-        params["with_watch_providers"] = "8|119|122|220|237|100|319" # Block daily soaps, only OTT Web Series
+        params["with_watch_providers"] = provider if provider else "8|119|122|220|237|100|319" # Block daily soaps, only OTT Web Series
+    elif provider:
+        params["watch_region"] = "IN"
+        params["with_watch_providers"] = provider
+
     if genre: params["with_genres"] = genre
     if year:
         if media_type == "tv":
@@ -307,10 +314,10 @@ def get_popular_people(page=1):
 import concurrent.futures
 
 def get_popular_directors(page=1):
-    movies_data_1 = fetch("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": (page * 2) - 1})
-    movies_data_2 = fetch("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": page * 2})
+    movies_data = fetch("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": page})
     
-    combined_movies = movies_data_1.get("results", []) + movies_data_2.get("results", [])
+    # Take only the top 15 movies to avoid hitting TMDb's 429 Too Many Requests limit when fetching credits
+    movies = movies_data.get("results", [])[:15]
     
     tamil_directors = []
     seen_ids = set()
@@ -323,9 +330,9 @@ def get_popular_directors(page=1):
                 directors.append(person)
         return directors
 
-    # Fetch movie credits concurrently (5 workers to respect rate limits while remaining extremely fast)
+    # Fetch movie credits concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        all_directors = executor.map(fetch_movie_director, combined_movies)
+        all_directors = executor.map(fetch_movie_director, movies)
         
     for movie_directors in all_directors:
         for person in movie_directors:
@@ -336,7 +343,7 @@ def get_popular_directors(page=1):
     return {
         "page": page,
         "results": tamil_directors,
-        "total_pages": movies_data_1.get("total_pages", 1) // 2
+        "total_pages": movies_data.get("total_pages", 1)
     }
 
 # ------------------------------------

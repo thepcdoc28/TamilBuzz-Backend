@@ -4,9 +4,11 @@ from database.database import db
 from database.models import RecentlyViewed
 import datetime
 
+from services.tmdb_service import get_movie_details
+
 history_routes = Blueprint('history', __name__)
 
-@history_routes.route('/', methods=['GET'])
+@history_routes.route('', methods=['GET'])
 @jwt_required()
 def get_history():
     """
@@ -18,11 +20,16 @@ def get_history():
         .order_by(RecentlyViewed.viewed_at.desc())\
         .limit(15).all()
         
-    return jsonify([{
-        "id": item.id,
-        "movie_id": item.movie_id,
-        "viewed_at": item.viewed_at.strftime('%Y-%m-%d %H:%M:%S')
-    } for item in history_records]), 200
+    results = []
+    for item in history_records:
+        details = get_movie_details(item.movie_id)
+        if details and 'id' in details:
+            # Add viewed_at to the movie details object so the frontend knows when they watched it
+            details['viewed_at'] = item.viewed_at.strftime('%Y-%m-%d %H:%M:%S')
+            details['history_id'] = item.id
+            results.append(details)
+            
+    return jsonify(results), 200
 
 
 @history_routes.route('/<int:movie_id>', methods=['POST'])

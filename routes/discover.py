@@ -16,12 +16,9 @@ def discover():
 
     rating = request.args.get("rating", default=None)
 
-    sort_by = request.args.get(
-        "sort_by",
-        default="popularity.desc"
-    )
-
+    sort_by = request.args.get("sort_by", default="popularity.desc")
     media_type = request.args.get("type", default="movie")
+    provider = request.args.get("provider", default=None)
 
     movies = discover_movies(
         page=page,
@@ -29,7 +26,8 @@ def discover():
         year=year,
         rating=rating,
         sort_by=sort_by,
-        media_type=media_type
+        media_type=media_type,
+        provider=provider
     )
 
     return jsonify(movies)

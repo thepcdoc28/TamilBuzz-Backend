@@ -20,7 +20,7 @@ from routes.favorite import favorite_routes
 from routes.watchlist import watchlist_routes
 from routes.review import review_routes 
 from routes.history import history_routes       
-
+from routes.ai_matchmaker import ai_routes
 load_dotenv()
 
 def create_app():
@@ -50,6 +50,7 @@ def create_app():
     app.register_blueprint(watchlist_routes, url_prefix='/api/watchlist')
     app.register_blueprint(review_routes, url_prefix='/api/reviews') 
     app.register_blueprint(history_routes, url_prefix='/api/history') 
+    app.register_blueprint(ai_routes)
     return app
 
 app = create_app()
