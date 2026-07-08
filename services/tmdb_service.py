@@ -90,7 +90,7 @@ def get_movie_details(movie_id, media_type="movie"):
     return fetch(f"/{media_type}/{movie_id}")
 
 def get_movie_videos(movie_id, media_type="movie"):
-    return fetch(f"/{media_type}/{movie_id}/videos")
+    return fetch(f"/{media_type}/{movie_id}/videos", {"include_video_language": "ta,en,te,hi,ml,kn,null"})
 
 def get_watch_providers(movie_id, media_type="movie"):
     return fetch(f"/{media_type}/{movie_id}/watch/providers")
@@ -108,8 +108,29 @@ def get_crew(movie_id, media_type="movie"):
 # ------------------------------------
 def get_similar_movies(movie_id, media_type="movie"):
     data = fetch(f"/{media_type}/{movie_id}/similar")
-    filtered = [m for m in data.get("results", []) if m.get("original_language") == "ta"]
-    return clean_media_data(filtered)
+    tamil_movies = [m for m in data.get("results", []) if m.get("original_language") == "ta"]
+    
+    # Fallback 1: Try recommendations if /similar yielded no Tamil results
+    if not tamil_movies:
+        rec_data = fetch(f"/{media_type}/{movie_id}/recommendations")
+        tamil_movies = [m for m in rec_data.get("results", []) if m.get("original_language") == "ta"]
+        
+    # Fallback 2: If still empty, discover popular Tamil movies in the same genre
+    if not tamil_movies:
+        details = fetch(f"/{media_type}/{movie_id}")
+        if details.get("genres"):
+            genre_ids = ",".join([str(g["id"]) for g in details["genres"][:2]])
+            disc_data = fetch("/discover/movie", {
+                "with_original_language": "ta", 
+                "with_genres": genre_ids, 
+                "sort_by": "popularity.desc"
+            })
+            tamil_movies = disc_data.get("results", [])
+
+    # Filter out the current movie itself if it accidentally got included
+    tamil_movies = [m for m in tamil_movies if str(m.get("id")) != str(movie_id)]
+    
+    return clean_media_data(tamil_movies)
 
 # ------------------------------------
 # Discover
