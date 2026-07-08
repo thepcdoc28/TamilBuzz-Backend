@@ -1,12 +1,8 @@
-import google.generativeai as genai
 import json
-import re
+from google import genai
+from google.genai import types
 from config import GEMINI_API_KEY
 from services.tmdb_service import search_movies
-
-# Configure the Gemini API Key
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 
 def get_ai_movie_recommendations(user_prompt):
     """
@@ -17,8 +13,8 @@ def get_ai_movie_recommendations(user_prompt):
         return {"error": "Gemini API key is not configured"}
         
     try:
-        # Create a Gemini model instance (gemini-1.5-flash is fast and cost-effective)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Create a Gemini client
+        client = genai.Client(api_key=GEMINI_API_KEY)
         
         system_instructions = """
         You are a Tamil movie expert and matchmaker. 
@@ -33,8 +29,9 @@ def get_ai_movie_recommendations(user_prompt):
         Do not include markdown tags (like ```json), do not include any other text, just the raw JSON array.
         """
         
-        response = model.generate_content(
-            system_instructions + "\n\nUser Request: " + user_prompt
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=system_instructions + "\n\nUser Request: " + user_prompt
         )
         
         text = response.text.strip()
