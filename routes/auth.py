@@ -100,3 +100,51 @@ def get_profile():
             "joined": user.created_at.strftime('%Y-%m-%d')
         }
     }), 200
+
+
+@auth_routes.route('/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    """Update current user profile. Requires valid JWT."""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    data = request.get_json()
+    new_username = data.get('username')
+    new_email = data.get('email')
+
+    if not new_username or not new_email:
+        return jsonify({"error": "Username and email are required"}), 400
+
+    # Check if another user has this username
+    if new_username != user.username:
+        existing_username = User.query.filter_by(username=new_username).first()
+        if existing_username:
+            return jsonify({"error": "Username is already taken"}), 409
+
+    # Check if another user has this email
+    if new_email != user.email:
+        existing_email = User.query.filter_by(email=new_email).first()
+        if existing_email:
+            return jsonify({"error": "Email is already taken"}), 409
+
+    try:
+        user.username = new_username
+        user.email = new_email
+        db.session.commit()
+
+        return jsonify({
+            "message": "Profile updated successfully",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "joined": user.created_at.strftime('%Y-%m-%d')
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to update profile due to a server error."}), 500
