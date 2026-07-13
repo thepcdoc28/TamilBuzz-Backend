@@ -25,6 +25,31 @@ def popular():
     return jsonify(get_popular_movies())
 
 
+@movie_routes.route("/api/trending-series")
+def trending_series():
+    return jsonify(get_trending_series())
+
+
+@movie_routes.route("/api/top-rated-series")
+def top_rated_series():
+    return jsonify(get_top_rated_series())
+
+
+@movie_routes.route("/api/popular-series")
+def popular_series():
+    return jsonify(get_popular_series())
+
+
+@movie_routes.route("/api/action")
+def action_movies():
+    return jsonify(get_action_movies())
+
+
+@movie_routes.route("/api/comedy")
+def comedy_movies():
+    return jsonify(get_comedy_movies())
+
+
 @movie_routes.route("/api/movie/<int:movie_id>")
 def movie(movie_id):
     media_type = request.args.get("type", "movie")

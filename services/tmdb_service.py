@@ -84,6 +84,38 @@ def get_popular_movies():
     return clean_media_data(p1.get("results", []) + p2.get("results", []))
 
 # ------------------------------------
+# Base TV Series Endpoints
+# ------------------------------------
+def get_trending_series():
+    params = {"with_original_language": "ta", "sort_by": "popularity.desc", "include_adult": "false", "watch_region": "IN", "with_watch_providers": "8|119|122|220|237|100|319"}
+    p1 = fetch("/discover/tv", {**params, "page": 1})
+    p2 = fetch("/discover/tv", {**params, "page": 2})
+    return clean_media_data(p1.get("results", []) + p2.get("results", []))
+
+def get_top_rated_series():
+    params = {"with_original_language": "ta", "sort_by": "vote_average.desc", "vote_count.gte": 25, "include_adult": "false", "watch_region": "IN", "with_watch_providers": "8|119|122|220|237|100|319"}
+    p1 = fetch("/discover/tv", {**params, "page": 1})
+    p2 = fetch("/discover/tv", {**params, "page": 2})
+    return clean_media_data(p1.get("results", []) + p2.get("results", []))
+
+def get_popular_series():
+    params = {"with_original_language": "ta", "sort_by": "vote_count.desc", "include_adult": "false", "watch_region": "IN", "with_watch_providers": "8|119|122|220|237|100|319"}
+    p1 = fetch("/discover/tv", {**params, "page": 1})
+    p2 = fetch("/discover/tv", {**params, "page": 2})
+    return clean_media_data(p1.get("results", []) + p2.get("results", []))
+
+# ------------------------------------
+# Extra Movie Categories Endpoints
+# ------------------------------------
+def get_action_movies():
+    p1 = fetch("/discover/movie", {"with_original_language": "ta", "with_genres": 28, "sort_by": "popularity.desc", "include_adult": "false", "page": 1})
+    return clean_media_data(p1.get("results", []))
+
+def get_comedy_movies():
+    p1 = fetch("/discover/movie", {"with_original_language": "ta", "with_genres": 35, "sort_by": "popularity.desc", "include_adult": "false", "page": 1})
+    return clean_media_data(p1.get("results", []))
+
+# ------------------------------------
 # Movie Details
 # ------------------------------------
 def get_movie_details(movie_id, media_type="movie"):
@@ -314,10 +346,14 @@ def get_popular_people(page=1):
 import concurrent.futures
 
 def get_popular_directors(page=1):
-    movies_data = fetch("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": page})
+    # Fetch 40 movies (2 TMDB pages) to guarantee enough unique directors
+    p1 = (int(page) * 2) - 1
+    p2 = int(page) * 2
     
-    # Take only the top 15 movies to avoid hitting TMDb's 429 Too Many Requests limit when fetching credits
-    movies = movies_data.get("results", [])[:15]
+    m1 = fetch("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": p1})
+    m2 = fetch("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": p2})
+    
+    movies = m1.get("results", []) + m2.get("results", [])
     
     tamil_directors = []
     seen_ids = set()
@@ -343,7 +379,7 @@ def get_popular_directors(page=1):
     return {
         "page": page,
         "results": tamil_directors,
-        "total_pages": movies_data.get("total_pages", 1)
+        "total_pages": max(1, m1.get("total_pages", 1) // 2)
     }
 
 # ------------------------------------
